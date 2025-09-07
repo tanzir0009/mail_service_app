@@ -1,4 +1,5 @@
-const knex = require('knex')({
+const knex = require('knex');
+const db = knex({
   client: 'pg',
   connection: process.env.DATABASE_URL
 });
@@ -23,7 +24,7 @@ async function setupDatabase() {
                 table.integer('quantity');
                 table.decimal('totalCost', 14, 2);
                 table.text('purchasedEmails');
-                table.timestamp('created_at').defaultTo(db.fn.now());
+                table.timestamp('created_at').defaultTo(knex.fn.now());
             });
             console.log('✅ "orders" table created.');
         }
@@ -36,7 +37,7 @@ async function setupDatabase() {
                 table.decimal('amount', 14, 2).notNullable();
                 table.string('trx_id').notNullable();
                 table.string('status').defaultTo('pending'); // pending, approved, rejected
-                table.timestamp('created_at').defaultTo(db.fn.now());
+                table.timestamp('created_at').defaultTo(knex.fn.now());
             });
             console.log('✅ "deposits" table created.');
         }
@@ -44,10 +45,10 @@ async function setupDatabase() {
         if (!(await db.schema.hasTable('settings'))) {
             await db.schema.createTable('settings', table => {
                 table.string('key').primary();
-                table.text('value'); 
+                table.text('value');
             });
             console.log('✅ "settings" table created.');
-            
+
             const existingSettings = await db('settings').where({ key: 'payment_methods' }).first();
             if (!existingSettings) {
                 await db('settings').insert({
@@ -65,4 +66,3 @@ async function setupDatabase() {
 }
 
 module.exports = { knex: db, setupDatabase };
-
