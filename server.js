@@ -61,7 +61,9 @@ app.post('/api/register', async (req, res) => {
         await knex('users').insert({ username, password: hashedPassword, balance: 0.00 });
         res.status(201).json({ success: true, message: "Registration successful!" });
     } catch (error) {
-        if (error.code === 'SQLITE_CONSTRAINT') return res.status(409).json({ success: false, message: "This username is already taken." });
+        if (error.code === '23505') { // PostgreSQL unique violation error code
+            return res.status(409).json({ success: false, message: "This username is already taken." });
+        }
         res.status(500).json({ success: false, message: "Server error during registration." });
     }
 });
@@ -123,6 +125,32 @@ app.post('/api/mail', authenticateToken, async (req, res) => {
         }
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// --- ADDED: Purchase History Endpoint ---
+app.get('/api/purchase-history', authenticateToken, async (req, res) => {
+    try {
+        const userId = req.user.id;
+        
+        // PostgreSQL-specific query to get records from the last 24 hours
+        // It's more reliable to let the database calculate the time difference
+        const recentOrders = await knex('orders')
+            .where({ user_id: userId })
+            .where('created_at', '>=', knex.raw("NOW() - interval '24 hours'"))
+            .orderBy('created_at', 'desc');
+
+        // Parse the JSON string of emails back into an array for each order
+        const history = recentOrders.map(order => ({
+            ...order,
+            purchasedEmails: JSON.parse(order.purchasedEmails)
+        }));
+        
+        res.json({ success: true, history });
+
+    } catch (error) {
+        console.error("Error fetching purchase history:", error);
+        res.status(500).json({ success: false, message: 'Could not fetch purchase history.' });
     }
 });
 

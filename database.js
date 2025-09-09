@@ -22,7 +22,9 @@ async function setupDatabase() {
         if (!(await db.schema.hasTable('orders'))) {
             await db.schema.createTable('orders', table => {
                 table.increments('id').primary();
-                table.integer('user_id').unsigned().references('id').inTable('users');
+                // --- অপটিমাইজেশন যোগ করা হয়েছে ---
+                // যদি কোনো ইউজার ডিলেট হয়, তার সব অর্ডারও ডিলেট হয়ে যাবে
+                table.integer('user_id').unsigned().references('id').inTable('users').onDelete('CASCADE');
                 table.string('mailType');
                 table.integer('quantity');
                 table.decimal('totalCost', 14, 2);
@@ -36,7 +38,7 @@ async function setupDatabase() {
         if (!(await db.schema.hasTable('deposits'))) {
             await db.schema.createTable('deposits', table => {
                 table.increments('id').primary();
-                table.integer('user_id').unsigned().references('id').inTable('users');
+                table.integer('user_id').unsigned().references('id').inTable('users').onDelete('CASCADE');
                 table.string('username').notNullable();
                 table.decimal('amount', 14, 2).notNullable();
                 table.string('trx_id').notNullable();
