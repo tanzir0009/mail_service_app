@@ -55,7 +55,6 @@ apiRouter.post('/register', async (req, res) => { /* ... Code unchanged ... */ }
 apiRouter.post('/login', async (req, res) => { /* ... Code unchanged ... */ });
 apiRouter.get('/me', authenticateToken, async (req, res) => { /* ... Code unchanged ... */ });
 apiRouter.get('/stock', async (req, res) => { /* ... Code unchanged ... */ });
-apiRouter.post('/mail', authenticateToken, async (req, res) => { /* ... Code unchanged ... */ });
 apiRouter.get('/purchase-history', authenticateToken, async (req, res) => { /* ... Code unchanged ... */ });
 apiRouter.get('/payment-methods', authenticateToken, async (req, res) => { /* ... Code unchanged ... */ });
 apiRouter.post('/deposit/request', authenticateToken, async (req, res) => { /* ... Code unchanged ... */ });
@@ -68,16 +67,13 @@ apiRouter.post('/admin/payment-methods/update', async (req, res) => { /* ... Cod
 apiRouter.post('/admin/deposits', async (req, res) => { /* ... Code unchanged ... */ });
 apiRouter.post('/admin/deposits/approve', async (req, res) => { /* ... Code unchanged ... */ });
 
-// ## Cancel Deposit Endpoint (এই রুটটি সার্ভারে থাকা আবশ্যক)
 apiRouter.post('/admin/deposits/cancel', async (req, res) => {
     const { adminKey, depositId } = req.body;
     if (adminKey !== ADMIN_SECRET_KEY) return res.status(403).json({ success: false, message: 'Invalid Admin Key.' });
     if (!depositId) return res.status(400).json({ success: false, message: 'Deposit ID is required.' });
-    
     try {
         const deposit = await knex('deposits').where({ id: depositId, status: 'pending' }).first();
         if (!deposit) return res.status(404).json({ success: false, message: 'This pending request was not found.' });
-        
         await knex('deposits').where({ id: depositId }).update({ status: 'cancelled' });
         res.json({ success: true, message: `Request #${depositId} has been successfully cancelled.` });
     } catch (error) {
@@ -88,8 +84,23 @@ apiRouter.post('/admin/deposits/cancel', async (req, res) => {
 
 app.use('/api', apiRouter);
 
+// --- Start Server ---
 app.listen(PORT, async () => {
     await setupDatabase();
-    console.log(`\n✅ Final server is running successfully on http://localhost:${PORT}`);
+
+    // ## নতুন ডিবাগিং কোড: সার্ভারের সমস্ত রুট প্রিন্ট করার জন্য
+    console.log("\n=============================================");
+    console.log("      SERVER STARTED - REGISTERED ROUTES     ");
+    console.log("=============================================");
+    apiRouter.stack.forEach(function(r){
+      if (r.route && r.route.path){
+        const methods = Object.keys(r.route.methods).join(', ').toUpperCase();
+        // নিশ্চিত করুন যে URLটি সঠিকভাবে দেখাচ্ছে
+        console.log(`✅ [${methods}] /api${r.route.path}`);
+      }
+    });
+    console.log("=============================================\n");
+    
+    console.log(`✅ চূড়ান্ত সার্ভার সফলভাবে চালু হয়েছে এবং http://localhost:${PORT} -এ চলছে`);
 });
 
