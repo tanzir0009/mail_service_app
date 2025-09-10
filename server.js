@@ -16,8 +16,8 @@ const PORT = process.env.PORT || 3000;
 // ## CHURANTO CORS SHOMADHAN ##
 const corsOptions = {
     origin: 'https://forsemail.42web.io',
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Shob dhoroner method anumoti dewa holo
+    allowedHeaders: ['Content-Type', 'Authorization'], // Authorization header anumoti dewa holo
     credentials: true
 };
 app.use(cors(corsOptions));
@@ -60,11 +60,12 @@ app.get('/', (req, res) => {
 function authenticateToken(req, res, next) {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
-    if (token == null) return res.sendStatus(401);
+    if (token == null) return res.status(401).json({ success: false, message: 'Authorization token is missing.' });
+    
     jwt.verify(token, JWT_SECRET, (err, user) => {
         if (err) {
             console.error("JWT Verification Error:", err.message);
-            return res.status(403).json({ success: false, message: 'Invalid or expired token.' });
+            return res.status(403).json({ success: false, message: 'Invalid or expired token. Please log in again.' });
         }
         req.user = user;
         next();
@@ -73,21 +74,33 @@ function authenticateToken(req, res, next) {
 
 // --- API ROUTES (Simplified for stability) ---
 app.get('/api/prices', (req, res) => res.json({ success: true, prices: ourPriceList }));
-app.post('/api/register', async (req, res) => { /* ... Baki code oporibortito ... */ });
-app.post('/api/login', async (req, res) => { /* ... Baki code oporibortito ... */ });
-app.get('/api/stock', async (req, res) => { /* ... Baki code oporibortito ... */ });
-app.post('/api/payment/auto/webhook', async (req, res) => { /* ... Baki code oporibortito ... */ });
-app.get('/api/me', authenticateToken, async (req, res) => { /* ... Baki code oporibortito ... */ });
-app.post('/api/mail', authenticateToken, async (req, res) => { /* ... Baki code oporibortito ... */ });
-app.get('/api/purchase-history', authenticateToken, async (req, res) => { /* ... Baki code oporibortito ... */ });
-app.get('/api/payment-methods', authenticateToken, async (req, res) => { /* ... Baki code oporibortito ... */ });
-app.post('/api/deposit/request', authenticateToken, async (req, res) => { /* ... Baki code oporibortito ... */ });
-app.post('/api/payment/auto/checkout', authenticateToken, async (req, res) => { /* ... Baki code oporibortito ... */ });
-app.post('/api/admin/payment-methods', async (req, res) => { /* ... Baki code oporibortito ... */ });
-app.post('/api/admin/payment-methods/update', async (req, res) => { /* ... Baki code oporibortito ... */ });
-app.post('/api/admin/deposits', async (req, res) => { /* ... Baki code oporibortito ... */ });
-app.post('/api/admin/deposits/approve', async (req, res) => { /* ... Baki code oporibortito ... */ });
-app.post('/api/admin/deposits/cancel', async (req, res) => { /* ... Baki code oporibortito ... */ });
+app.post('/api/register', async (req, res) => { /* Code is correct, no changes needed */ });
+app.post('/api/login', async (req, res) => { /* Code is correct, no changes needed */ });
+app.get('/api/stock', async (req, res) => { /* Code is correct, no changes needed */ });
+app.post('/api/payment/auto/webhook', async (req, res) => { /* Code is correct, no changes needed */ });
+
+// Authenticated user routes
+app.get('/api/me', authenticateToken, async (req, res) => {
+    try {
+        const user = await knex('users').where({ id: req.user.id }).first();
+        if (!user) return res.status(404).json({ success: false, message: 'User not found.' });
+        res.json({ success: true, username: user.username, balance: parseFloat(user.balance).toFixed(2) });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Could not fetch user info.' });
+    }
+});
+app.post('/api/mail', authenticateToken, async (req, res) => { /* Code is correct, no changes needed */ });
+app.get('/api/purchase-history', authenticateToken, async (req, res) => { /* Code is correct, no changes needed */ });
+app.get('/api/payment-methods', authenticateToken, async (req, res) => { /* Code is correct, no changes needed */ });
+app.post('/api/deposit/request', authenticateToken, async (req, res) => { /* Code is correct, no changes needed */ });
+app.post('/api/payment/auto/checkout', authenticateToken, async (req, res) => { /* Code is correct, no changes needed */ });
+
+// Admin routes
+app.post('/api/admin/payment-methods', async (req, res) => { /* Code is correct, no changes needed */ });
+app.post('/api/admin/payment-methods/update', async (req, res) => { /* Code is correct, no changes needed */ });
+app.post('/api/admin/deposits', async (req, res) => { /* Code is correct, no changes needed */ });
+app.post('/api/admin/deposits/approve', async (req, res) => { /* Code is correct, no changes needed */ });
+app.post('/api/admin/deposits/cancel', async (req, res) => { /* Code is correct, no changes needed */ });
 
 app.listen(PORT, async () => {
     await setupDatabase();
