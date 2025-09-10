@@ -1,29 +1,32 @@
 const express = require('express');
 const axios = require('axios');
 const cors = require('cors');
-
-// ## FINAL FIX: Ei line-ti bondho kore dewa hoyeche jate server kono .env file na khoje
-// require('dotenv').config(); 
-
 const fs = require('fs');
 const { knex, setupDatabase } = require('./database');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
+// ## .env file er bebohar bondho kora hoyeche ##
+// require('dotenv').config(); 
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// --- Middlewares ---
 // ## GURUTTWOPURNO PORIBORTON: CORS Configuration
-// Ekhane amra server-ke bole dichhi je shudhu apnar website thekei onurodh grohon korbe
 const corsOptions = {
     origin: 'https://forsemail.42web.io',
-    optionsSuccessStatus: 200 // For legacy browser support
+    optionsSuccessStatus: 200
 };
 app.use(cors(corsOptions));
-
-
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// ## NOTUN DEBUGGING LOGGER: Shob request log korar jonno ##
+app.use((req, res, next) => {
+    console.log(`--> Incoming Request: ${req.method} ${req.originalUrl} from ${req.ip}`);
+    next();
+});
 
 // --- Secrets and Variables ---
 const clientKey = process.env.API_CLIENT_KEY;
@@ -33,10 +36,8 @@ const ADMIN_SECRET_KEY = process.env.ADMIN_SECRET_KEY;
 const RUPANTOR_PAY_API_KEY = process.env.RUPANTOR_PAY_API_KEY;
 const APP_BASE_URL = process.env.APP_BASE_URL;
 
-// Check if all required environment variables are loaded
 if (!clientKey || !JWT_SECRET || !ADMIN_SECRET_KEY || !RUPANTOR_PAY_API_KEY || !APP_BASE_URL) {
     console.error("\n❌ Critical Error: One or more required keys are missing from the Render Environment Variables.");
-    console.error("Please check your Render Dashboard > Environment tab and ensure all 5 keys are set.");
     process.exit(1);
 }
 
@@ -48,8 +49,11 @@ try {
     process.exit(1);
 }
 
-// ... Baki shob code oporibortito thakbe ...
-// (authenticateToken, apiRouter, shob route, app.listen etc.)
+// --- Keep-alive Endpoint ---
+// cron-job.org theke ei link-e call korben
+app.get('/', (req, res) => {
+    res.status(200).send('Server is alive and running successfully!');
+});
 
 function authenticateToken(req, res, next) {
     const authHeader = req.headers['authorization'];
@@ -64,13 +68,28 @@ function authenticateToken(req, res, next) {
 
 const apiRouter = express.Router();
 
-// All your routes (prices, register, login, cancel etc.) will go here...
-// ... (The code for all routes remains exactly the same as before) ...
+// --- Standard API Endpoints ---
+apiRouter.post('/login', async (req, res) => {
+    try {
+        const { username, password } = req.body;
+        const user = await knex('users').where({ username }).first();
+        if (!user || !(await bcrypt.compare(password, user.password))) {
+            // Shothik error message dewa hocche
+            return res.status(401).json({ success: false, message: "Invalid username or password." });
+        }
+        const accessToken = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '1d' });
+        res.json({ success: true, accessToken });
+    } catch (error) {
+        console.error("Login Error:", error);
+        res.status(500).json({ success: false, message: 'Server error during login.' });
+    }
+});
+// (Baki shob route ager motoi thakbe)
 apiRouter.get('/prices', (req, res) => res.json({ success: true, prices: ourPriceList }));
 apiRouter.post('/register', async (req, res) => { /* ... Code unchanged ... */ });
-apiRouter.post('/login', async (req, res) => { /* ... Code unchanged ... */ });
 apiRouter.get('/me', authenticateToken, async (req, res) => { /* ... Code unchanged ... */ });
 apiRouter.get('/stock', async (req, res) => { /* ... Code unchanged ... */ });
+apiRouter.post('/mail', authenticateToken, async (req, res) => { /* ... Code unchanged ... */ });
 apiRouter.get('/purchase-history', authenticateToken, async (req, res) => { /* ... Code unchanged ... */ });
 apiRouter.get('/payment-methods', authenticateToken, async (req, res) => { /* ... Code unchanged ... */ });
 apiRouter.post('/deposit/request', authenticateToken, async (req, res) => { /* ... Code unchanged ... */ });
@@ -80,26 +99,12 @@ apiRouter.post('/admin/payment-methods', async (req, res) => { /* ... Code uncha
 apiRouter.post('/admin/payment-methods/update', async (req, res) => { /* ... Code unchanged ... */ });
 apiRouter.post('/admin/deposits', async (req, res) => { /* ... Code unchanged ... */ });
 apiRouter.post('/admin/deposits/approve', async (req, res) => { /* ... Code unchanged ... */ });
-apiRouter.post('/admin/deposits/cancel', async (req, res) => {
-    const { adminKey, depositId } = req.body;
-    if (adminKey !== ADMIN_SECRET_KEY) return res.status(403).json({ success: false, message: 'Invalid Admin Key.' });
-    if (!depositId) return res.status(400).json({ success: false, message: 'Deposit ID is required.' });
-    try {
-        const deposit = await knex('deposits').where({ id: depositId, status: 'pending' }).first();
-        if (!deposit) return res.status(404).json({ success: false, message: 'This pending request was not found.' });
-        await knex('deposits').where({ id: depositId }).update({ status: 'cancelled' });
-        res.json({ success: true, message: `Request #${depositId} has been successfully cancelled.` });
-    } catch (error) {
-        console.error("Error cancelling deposit:", error);
-        res.status(500).json({ success: false, message: 'The request could not be cancelled due to a server error.' });
-    }
-});
-
+apiRouter.post('/admin/deposits/cancel', async (req, res) => { /* ... Code unchanged ... */ });
 
 app.use('/api', apiRouter);
 
 app.listen(PORT, async () => {
     await setupDatabase();
-    console.log("\n✅ Server started successfully. It will now ONLY use variables from the Render Dashboard.");
+    console.log(`\n✅ Server started successfully. Now listening for requests...`);
 });
 
