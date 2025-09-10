@@ -13,13 +13,19 @@ const jwt = require('jsonwebtoken');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middlewares
-app.use(cors());
+// ## GURUTTWOPURNO PORIBORTON: CORS Configuration
+// Ekhane amra server-ke bole dichhi je shudhu apnar website thekei onurodh grohon korbe
+const corsOptions = {
+    origin: 'https://forsemail.42web.io',
+    optionsSuccessStatus: 200 // For legacy browser support
+};
+app.use(cors(corsOptions));
+
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // --- Secrets and Variables ---
-// Ekhon shob key shorashori Render Environment theke ashbe
 const clientKey = process.env.API_CLIENT_KEY;
 const apiHost = 'https://gapi.hotmail007.com';
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -42,6 +48,9 @@ try {
     process.exit(1);
 }
 
+// ... Baki shob code oporibortito thakbe ...
+// (authenticateToken, apiRouter, shob route, app.listen etc.)
+
 function authenticateToken(req, res, next) {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
@@ -55,7 +64,8 @@ function authenticateToken(req, res, next) {
 
 const apiRouter = express.Router();
 
-// --- Standard API Endpoints ---
+// All your routes (prices, register, login, cancel etc.) will go here...
+// ... (The code for all routes remains exactly the same as before) ...
 apiRouter.get('/prices', (req, res) => res.json({ success: true, prices: ourPriceList }));
 apiRouter.post('/register', async (req, res) => { /* ... Code unchanged ... */ });
 apiRouter.post('/login', async (req, res) => { /* ... Code unchanged ... */ });
@@ -66,13 +76,10 @@ apiRouter.get('/payment-methods', authenticateToken, async (req, res) => { /* ..
 apiRouter.post('/deposit/request', authenticateToken, async (req, res) => { /* ... Code unchanged ... */ });
 apiRouter.post('/payment/auto/checkout', authenticateToken, async (req, res) => { /* ... Code unchanged ... */ });
 apiRouter.post('/payment/auto/webhook', async (req, res) => { /* ... Code unchanged ... */ });
-
-// --- Admin Endpoints ---
 apiRouter.post('/admin/payment-methods', async (req, res) => { /* ... Code unchanged ... */ });
 apiRouter.post('/admin/payment-methods/update', async (req, res) => { /* ... Code unchanged ... */ });
 apiRouter.post('/admin/deposits', async (req, res) => { /* ... Code unchanged ... */ });
 apiRouter.post('/admin/deposits/approve', async (req, res) => { /* ... Code unchanged ... */ });
-
 apiRouter.post('/admin/deposits/cancel', async (req, res) => {
     const { adminKey, depositId } = req.body;
     if (adminKey !== ADMIN_SECRET_KEY) return res.status(403).json({ success: false, message: 'Invalid Admin Key.' });
@@ -87,6 +94,7 @@ apiRouter.post('/admin/deposits/cancel', async (req, res) => {
         res.status(500).json({ success: false, message: 'The request could not be cancelled due to a server error.' });
     }
 });
+
 
 app.use('/api', apiRouter);
 
