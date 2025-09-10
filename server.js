@@ -50,7 +50,6 @@ try {
 }
 
 // --- Keep-alive Endpoint ---
-// cron-job.org theke ei link-e call korben
 app.get('/', (req, res) => {
     res.status(200).send('Server is alive and running successfully!');
 });
@@ -69,12 +68,13 @@ function authenticateToken(req, res, next) {
 const apiRouter = express.Router();
 
 // --- Standard API Endpoints ---
+apiRouter.get('/prices', (req, res) => res.json({ success: true, prices: ourPriceList }));
+apiRouter.post('/register', async (req, res) => { /* ... Code unchanged ... */ });
 apiRouter.post('/login', async (req, res) => {
     try {
         const { username, password } = req.body;
         const user = await knex('users').where({ username }).first();
         if (!user || !(await bcrypt.compare(password, user.password))) {
-            // Shothik error message dewa hocche
             return res.status(401).json({ success: false, message: "Invalid username or password." });
         }
         const accessToken = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '1d' });
@@ -84,9 +84,6 @@ apiRouter.post('/login', async (req, res) => {
         res.status(500).json({ success: false, message: 'Server error during login.' });
     }
 });
-// (Baki shob route ager motoi thakbe)
-apiRouter.get('/prices', (req, res) => res.json({ success: true, prices: ourPriceList }));
-apiRouter.post('/register', async (req, res) => { /* ... Code unchanged ... */ });
 apiRouter.get('/me', authenticateToken, async (req, res) => { /* ... Code unchanged ... */ });
 apiRouter.get('/stock', async (req, res) => { /* ... Code unchanged ... */ });
 apiRouter.post('/mail', authenticateToken, async (req, res) => { /* ... Code unchanged ... */ });
@@ -95,13 +92,18 @@ apiRouter.get('/payment-methods', authenticateToken, async (req, res) => { /* ..
 apiRouter.post('/deposit/request', authenticateToken, async (req, res) => { /* ... Code unchanged ... */ });
 apiRouter.post('/payment/auto/checkout', authenticateToken, async (req, res) => { /* ... Code unchanged ... */ });
 apiRouter.post('/payment/auto/webhook', async (req, res) => { /* ... Code unchanged ... */ });
-apiRouter.post('/admin/payment-methods', async (req, res) => { /* ... Code unchanged ... */ });
-apiRouter.post('/admin/payment-methods/update', async (req, res) => { /* ... Code unchanged ... */ });
-apiRouter.post('/admin/deposits', async (req, res) => { /* ... Code unchanged ... */ });
-apiRouter.post('/admin/deposits/approve', async (req, res) => { /* ... Code unchanged ... */ });
-apiRouter.post('/admin/deposits/cancel', async (req, res) => { /* ... Code unchanged ... */ });
 
-app.use('/api', apiRouter);
+// --- Admin Endpoints ---
+const adminRouter = express.Router();
+adminRouter.post('/payment-methods', async (req, res) => { /* ... Code unchanged ... */ });
+adminRouter.post('/payment-methods/update', async (req, res) => { /* ... Code unchanged ... */ });
+adminRouter.post('/deposits', async (req, res) => { /* ... Code unchanged ... */ });
+adminRouter.post('/deposits/approve', async (req, res) => { /* ... Code unchanged ... */ });
+adminRouter.post('/deposits/cancel', async (req, res) => { /* ... Code unchanged ... */ });
+
+// ## SHESH PORIBORTON: Router-gulo shothik bhabe bebohar kora
+apiRouter.use('/admin', adminRouter); // Admin route-gulo '/api/admin' er under-e thakbe
+app.use('/api', apiRouter); // Shob public route '/api' er under-e thakbe
 
 app.listen(PORT, async () => {
     await setupDatabase();
