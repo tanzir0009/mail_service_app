@@ -1,7 +1,10 @@
 const express = require('express');
 const axios = require('axios');
 const cors = require('cors');
-require('dotenv').config();
+
+// ## FINAL FIX: Ei line-ti bondho kore dewa hoyeche jate server kono .env file na khoje
+// require('dotenv').config(); 
+
 const fs = require('fs');
 const { knex, setupDatabase } = require('./database');
 const bcrypt = require('bcryptjs');
@@ -16,6 +19,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // --- Secrets and Variables ---
+// Ekhon shob key shorashori Render Environment theke ashbe
 const clientKey = process.env.API_CLIENT_KEY;
 const apiHost = 'https://gapi.hotmail007.com';
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -23,8 +27,10 @@ const ADMIN_SECRET_KEY = process.env.ADMIN_SECRET_KEY;
 const RUPANTOR_PAY_API_KEY = process.env.RUPANTOR_PAY_API_KEY;
 const APP_BASE_URL = process.env.APP_BASE_URL;
 
+// Check if all required environment variables are loaded
 if (!clientKey || !JWT_SECRET || !ADMIN_SECRET_KEY || !RUPANTOR_PAY_API_KEY || !APP_BASE_URL) {
-    console.error("\n❌ Critical Error: One or more required keys are missing from the .env file.");
+    console.error("\n❌ Critical Error: One or more required keys are missing from the Render Environment Variables.");
+    console.error("Please check your Render Dashboard > Environment tab and ensure all 5 keys are set.");
     process.exit(1);
 }
 
@@ -84,23 +90,8 @@ apiRouter.post('/admin/deposits/cancel', async (req, res) => {
 
 app.use('/api', apiRouter);
 
-// --- Start Server ---
 app.listen(PORT, async () => {
     await setupDatabase();
-
-    // ## নতুন ডিবাগিং কোড: সার্ভারের সমস্ত রুট প্রিন্ট করার জন্য
-    console.log("\n=============================================");
-    console.log("      SERVER STARTED - REGISTERED ROUTES     ");
-    console.log("=============================================");
-    apiRouter.stack.forEach(function(r){
-      if (r.route && r.route.path){
-        const methods = Object.keys(r.route.methods).join(', ').toUpperCase();
-        // নিশ্চিত করুন যে URLটি সঠিকভাবে দেখাচ্ছে
-        console.log(`✅ [${methods}] /api${r.route.path}`);
-      }
-    });
-    console.log("=============================================\n");
-    
-    console.log(`✅ চূড়ান্ত সার্ভার সফলভাবে চালু হয়েছে এবং http://localhost:${PORT} -এ চলছে`);
+    console.log("\n✅ Server started successfully. It will now ONLY use variables from the Render Dashboard.");
 });
 
