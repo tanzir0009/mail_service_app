@@ -16,13 +16,11 @@ const PORT = process.env.PORT || 3000;
 // ## CHURANTO CORS SHOMADHAN ##
 const corsOptions = {
     origin: 'https://forsemail.42web.io',
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Shob dhoroner method anumoti dewa holo
-    allowedHeaders: ['Content-Type', 'Authorization'], // Authorization header anumoti dewa holo
-    optionsSuccessStatus: 200
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true
 };
 app.use(cors(corsOptions));
-// Browser-er preflight request handle korar jonno
-app.options('*', cors(corsOptions));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -79,24 +77,12 @@ app.post('/api/register', async (req, res) => { /* ... Baki code oporibortito ..
 app.post('/api/login', async (req, res) => { /* ... Baki code oporibortito ... */ });
 app.get('/api/stock', async (req, res) => { /* ... Baki code oporibortito ... */ });
 app.post('/api/payment/auto/webhook', async (req, res) => { /* ... Baki code oporibortito ... */ });
-
-// Authenticated user routes
-app.get('/api/me', authenticateToken, async (req, res) => {
-    try {
-        const user = await knex('users').where({ id: req.user.id }).first();
-        if (!user) return res.status(404).json({ success: false, message: 'User not found.' });
-        res.json({ success: true, username: user.username, balance: parseFloat(user.balance).toFixed(2) });
-    } catch (error) {
-        res.status(500).json({ success: false, message: 'Could not fetch user info.' });
-    }
-});
+app.get('/api/me', authenticateToken, async (req, res) => { /* ... Baki code oporibortito ... */ });
 app.post('/api/mail', authenticateToken, async (req, res) => { /* ... Baki code oporibortito ... */ });
 app.get('/api/purchase-history', authenticateToken, async (req, res) => { /* ... Baki code oporibortito ... */ });
 app.get('/api/payment-methods', authenticateToken, async (req, res) => { /* ... Baki code oporibortito ... */ });
 app.post('/api/deposit/request', authenticateToken, async (req, res) => { /* ... Baki code oporibortito ... */ });
 app.post('/api/payment/auto/checkout', authenticateToken, async (req, res) => { /* ... Baki code oporibortito ... */ });
-
-// Admin routes
 app.post('/api/admin/payment-methods', async (req, res) => { /* ... Baki code oporibortito ... */ });
 app.post('/api/admin/payment-methods/update', async (req, res) => { /* ... Baki code oporibortito ... */ });
 app.post('/api/admin/deposits', async (req, res) => { /* ... Baki code oporibortito ... */ });
