@@ -8,7 +8,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 // Middlewares
 app.use(cors());
@@ -241,3 +241,4 @@ app.listen(PORT, async () => {
     await setupDatabase();
     console.log(`\n✅ চূড়ান্ত সার্ভার সফলভাবে চালু হয়েছে এবং http://localhost:${PORT} -এ চলছে`);
 });
+
