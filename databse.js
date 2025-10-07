@@ -1,9 +1,15 @@
 const knex = require('knex');
 
+// ## মূল পরিবর্তনটি এখানেই করা হয়েছে ##
+// SSL কানেকশন চালু করার জন্য connection অবজেক্টটি পরিবর্তন করা হলো
 const db = knex({
-    client: 'pg', // PostgreSQL ক্লায়েন্ট
-    connection: process.env.DATABASE_URL, // Render থেকে সংযোগ স্ট্রিং
+    client: 'pg',
+    connection: {
+        connectionString: process.env.DATABASE_URL,
+        ssl: { rejectUnauthorized: false }
+    }
 });
+// #####################################
 
 async function setupDatabase() {
     try {
@@ -39,19 +45,15 @@ async function setupDatabase() {
                 table.integer('user_id').unsigned().references('id').inTable('users').onDelete('CASCADE');
                 table.string('username').notNullable();
                 table.decimal('amount', 14, 2).notNullable();
-                // ## পরিবর্তন: trx_id এখন থেকে খালি থাকতে পারবে (nullable)
                 table.string('trx_id').nullable();
                 table.string('status').defaultTo('pending');
-                // ## নতুন কলাম: পেমেন্টের ধরণ চিহ্নিত করার জন্য
                 table.string('method').notNullable().defaultTo('manual');
                 table.timestamp('created_at').defaultTo(db.fn.now());
             });
             console.log('✅ "deposits" table created with new schema.');
         } else {
-            // ## নতুন কোড: যদি টেবিল আগে থেকেই থাকে, তাহলে এটি আপডেট করবে
             console.log('ℹ️ "deposits" table already exists. Checking for updates...');
             
-            // 'method' কলামটি যোগ করা
             if (!(await db.schema.hasColumn('deposits', 'method'))) {
                 await db.schema.alterTable('deposits', table => {
                     table.string('method').notNullable().defaultTo('manual');
@@ -59,12 +61,9 @@ async function setupDatabase() {
                 console.log('✅ "deposits" table updated with "method" column.');
             }
 
-            // 'trx_id' কলামটিকে nullable করা
-            // এই কোডটি নিশ্চিত করবে যে কলামটি পরিবর্তন করা হয়েছে
             await db.schema.alterTable('deposits', table => {
                 table.string('trx_id').nullable().alter();
             });
-            // এই বার্তাটি দেখানোর জন্য একটি ফ্ল্যাগ ব্যবহার করা যেতে পারে, তবে আপাতত এটি ঠিক আছে
             console.log('✅ "deposits" table "trx_id" column verified to be nullable.');
         }
 
@@ -86,12 +85,3 @@ async function setupDatabase() {
                     { id: Date.now(), method: 'bKash Personal', number: '01700000000' }
                 ])
             });
-            console.log('✅ Default payment methods inserted.');
-        }
-
-    } catch (error) {
-        console.error("❌ Database setup failed:", error);
-    }
-}
-
-module.exports = { knex: db, setupDatabase };
